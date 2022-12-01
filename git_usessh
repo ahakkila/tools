@@ -1,0 +1,4 @@
+#!/bin/bash
+
+git config --local url.git@github.com:.insteadOf https://github.com/
+
