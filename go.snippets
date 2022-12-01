@@ -1,0 +1,392 @@
+snippet es "entity struct"
+	// ${1:EntityName} contains data
+	type ${1} struct {
+		ID        uint           `gorm:"primaryKey" json:"id"`
+		CreatedAt time.Time      `json:"-"`
+		UpdatedAt time.Time      `json:"-"`
+		DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+	}
+
+snippet eitem "new entity item"
+	${1:Name} ${2:Type} \`json:"${1}"\`
+
+snippet ec "entity create"
+	// Create${1:EntityName} creates a new record in ${2:TableName} table
+	func Create${1}(d *gorm.DB, ${3:EntityVar} *${1}) error {
+		result := d.Create(${3})
+		if result.RowsAffected != 1 {
+			return nil, result.Error
+		}
+		return nil
+	}
+
+snippet ef "entity findbyid"
+	// Find${1:EntityName}ByID queries ${2:TableName} table for a record with id
+	func Find${1}ByID(d *gorm.DB, ${3:EntityVar} *${1}) error {
+
+		result := d.First(${3})
+
+		if result.RowsAffected != 1 {
+			return result.Error
+		}
+
+		return nil
+	}
+
+snippet efall "entity find all"
+	// Find${1:EntityName}All queries ${2:TableName} table for all records
+	func Find${1}All(d *gorm.DB, ${3:EntityVar} *[]${1}) error {
+
+		result := d.Find(${3})
+
+		if result.RowsAffected < 1 {
+			return result.Error
+		}
+
+		return nil
+	}
+
+snippet ee "entity edit"
+	// Edit${1:EntityName} updates a record in ${2:TableName} table
+	func Edit${1}(d *gorm.DB, ${3} *${1}) error {
+		result := d.Save(${3})
+		if result.RowsAffected != 1 {
+			return result.Error
+		}
+		return nil
+	}
+
+snippet ed "entity delete"
+	// Delete${1:EntityName}ByID marks a record in ${2:TableName} table deleted by setting Deleted = true
+	func Delete${1}ByID(d *gorm.DB, id uint) error {
+	    result := d.Delete(&${1}{ID: id})
+		if result.RowsAffected != 1 {
+		    return result.Error
+		}
+
+		return nil
+	}
+
+snippet entity "entire entity with struct and methods"
+	// ${1:EntityName} contains data
+	type ${1} struct {
+		ID        uint           `gorm:"primaryKey" json:"id"`
+		CreatedAt time.Time      `json:"-"`
+		UpdatedAt time.Time      `json:"-"`
+		DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+	}
+	
+	// Create${1} creates a new record in ${2:TableName} table
+	func Create${1}(d *gorm.DB, ${3:EntityVar} *${1}) error {
+		result := d.Create(${3})
+		if result.RowsAffected != 1 {
+			return nil, result.Error
+		}
+		return nil
+	}
+	
+	// Find${1}ByID queries ${2} table for a record with id
+	func Find${1}ByID(d *gorm.DB, ${3} *${1}) error {
+
+		result := d.First(${3})
+
+		if result.RowsAffected != 1 {
+			return result.Error
+		}
+
+		return nil
+	}
+
+	// Find${1}All queries ${2} table for all records
+	func Find${1}All(d *gorm.DB, ${3}All *[]${1}) error {
+
+		result := d.Find(${3}All)
+
+		if result.RowsAffected < 1 {
+			return result.Error
+		}
+
+		return nil
+	}
+
+	// Edit${1} updates a record in ${2} table
+	func Edit${1}(d *gorm.DB, ${3} *${1}) error {
+		result := d.Save(${3})
+		if result.RowsAffected != 1 {
+			return result.Error
+		}
+		return nil
+	}
+
+	// Delete${1}ByID marks a record in ${2} table deleted 
+	func Delete${1}ByID(d *gorm.DB, id uint) error {
+	    result := d.Delete(&${1}{ID: id})
+		if result.RowsAffected != 1 {
+		    return result.Error
+		}
+
+		return nil
+	}
+
+snippet convid "convert id string to uint"
+	id, err := model.ConvertJSONID(c.Param("id"))
+	if err != nil {
+		utils.BadRequest(c, err.Error())
+		return
+	}
+
+snippet getdb "get database connection reference"
+	db := c.MustGet("dbconn").(*gorm.DB)
+
+snippet bindjson "bind json payload to local var"
+	if err := c.ShouldBindJSON(&${1:EntityVar}); err != nil {
+		utils.BadRequest(c, err.Error())
+		return
+	}
+
+snippet resp200 "JSON response with status 200"
+	c.JSON(http.StatusOK, ${1:ResponseVar})
+
+snippet apicreate "create a new record"
+	// Create creates a new ${1:Entity} record in the database
+	func Create(c *gin.Context) {
+		${2:EntityVar} := model.${1}{}
+
+		if err := c.ShouldBindJSON(&${2}); err != nil {
+			utils.BadRequest(c, err.Error())
+			return
+		}
+
+		db := c.MustGet("dbconn").(*gorm.DB)
+
+		err := model.Create${1}(db, &${2})
+		if err != nil {
+			utils.InternalServerError(c, err.Error())
+			return
+		}
+
+		c.JSON(http.StatusCreated, ${2})
+	}
+
+snippet apifindbyid "retrieve one entity by id"
+	// FindByID queries a ${1:Entity} record from database
+	func FindByID(c *gin.Context) {
+
+		id, err := model.ConvertJSONID(c.Param("id"))
+		if err != nil {
+			utils.BadRequest(c, err.Error())
+			return
+		}
+
+		db := c.MustGet("dbconn").(*gorm.DB)
+		${2:EntityVar} := model.${1}{ID: id}
+		err = model.Find${1}ByID(db, &${2})
+		if err != nil {
+			utils.NotFound(c, "Could not find ${1} with id %d: %v", id, err.Error())
+			return
+		}
+
+		c.JSON(http.StatusOK, ${2})
+	}
+
+snippet apifindall "retrieve all entities"
+	// FindAll queries all ${1:Entity} records from the database
+	func FindAll(c *gin.Context) {
+
+		db := c.MustGet("dbconn").(*gorm.DB)
+
+		${2:EntityVar}All := []model.${1}{}
+		err := model.Find${1}All(db, &${2}All)
+		if err != nil {
+			utils.NotFound(c, "Could not find any ${1} records: %v", err.Error())
+			return
+		}
+
+		c.JSON(http.StatusOK, ${2}All)
+	}
+
+snippet apiedit "update an entity record"
+	// Edit updates a ${1:Entity} record in the database
+	func Edit(c *gin.Context) {
+		${2:EntityVar} := model.${1}{}
+
+		id, err := model.ConvertJSONID(c.Param("id"))
+		if err != nil {
+			utils.BadRequest(c, err.Error())
+			return
+		}
+
+		db := c.MustGet("dbconn").(*gorm.DB)
+
+		if err := c.ShouldBindJSON(&${2}); err != nil {
+			utils.BadRequest(c, err.Error())
+			return
+		}
+
+		if id != ${2}.ID {
+			utils.BadRequest(c, "Urlpath and body ${1} id mismatch, urlpath id %d, body id %d", id, ${2}.ID)
+			return
+		}
+
+		err = model.Edit${1}(db, &${2})
+		if err != nil {
+			utils.InternalServerError(c, err.Error())
+			return
+		}
+
+		c.JSON(http.StatusOK, ${2})
+	}
+
+snippet apidelete "delete an entity record"
+	// Delete marks a ${1:EntityName} deleted in the database
+	func Delete(c *gin.Context) {
+
+		id, err := model.ConvertJSONID(c.Param("id"))
+		if err != nil {
+			utils.BadRequest(c, err.Error())
+			return
+		}
+
+		db := c.MustGet("dbconn").(*gorm.DB)
+
+		err = model.Delete${1}ByID(db, id)
+		if err != nil {
+			utils.NotFound(c, "Could not find ${1} with id %d, %v", id, err.Error())
+			return
+		}
+
+		utils.Success(c, "${1} id %d deleted", id)
+	}
+
+snippet apiall "generate whole CRUD API for an entity"
+	import (
+		model "github.com/membranefi/euroe-model"
+	)
+
+	// Create creates a new ${1:Entity} record in the database
+	func Create(c *gin.Context) {
+		${2:EntityVar} := model.${1}{}
+
+		if err := c.ShouldBindJSON(&${2}); err != nil {
+			utils.BadRequest(c, err.Error())
+			return
+		}
+
+		db := c.MustGet("dbconn").(*gorm.DB)
+
+		err := model.Create${1}(db, &${2})
+		if err != nil {
+			utils.InternalServerError(c, err.Error())
+			return
+		}
+
+		c.JSON(http.StatusCreated, ${2})
+	}
+
+	// FindByID queries a ${1} record from database
+	func FindByID(c *gin.Context) {
+
+		id, err := model.ConvertJSONID(c.Param("id"))
+		if err != nil {
+			utils.BadRequest(c, err.Error())
+			return
+		}
+
+		db := c.MustGet("dbconn").(*gorm.DB)
+		${2} := model.${1}{ID: id}
+		err = model.Find${1}ByID(db, &${2})
+		if err != nil {
+			utils.NotFound(c, "Could not find ${1} with id %d: %v", id, err.Error())
+			return
+		}
+
+		c.JSON(http.StatusOK, ${2})
+	}
+
+	// FindAll queries all ${1} records from the database
+	func FindAll(c *gin.Context) {
+
+		db := c.MustGet("dbconn").(*gorm.DB)
+
+		${2}All := []model.${1}{}
+		err := model.Find${1}All(db, &${2}All)
+		if err != nil {
+			utils.NotFound(c, "Could not find any ${1} records: %v", err.Error())
+			return
+		}
+
+		c.JSON(http.StatusOK, ${2}All)
+	}
+
+	// Edit updates a ${1} record in the database
+	func Edit(c *gin.Context) {
+		${2} := model.${1}{}
+
+		id, err := model.ConvertJSONID(c.Param("id"))
+		if err != nil {
+			utils.BadRequest(c, err.Error())
+			return
+		}
+
+		db := c.MustGet("dbconn").(*gorm.DB)
+
+		if err := c.ShouldBindJSON(&${2}); err != nil {
+			utils.BadRequest(c, err.Error())
+			return
+		}
+
+		if id != ${2}.ID {
+			utils.BadRequest(c, "Urlpath and body ${1} id mismatch, urlpath id %d, body id %d", id, ${2}.ID)
+			return
+		}
+
+		err = model.Edit${1}(db, &${2})
+		if err != nil {
+			utils.InternalServerError(c, err.Error())
+			return
+		}
+
+		c.JSON(http.StatusOK, ${2})
+	}
+
+	// Delete marks a ${1} deleted in the database
+	func Delete(c *gin.Context) {
+
+		id, err := model.ConvertJSONID(c.Param("id"))
+		if err != nil {
+			utils.BadRequest(c, err.Error())
+			return
+		}
+
+		db := c.MustGet("dbconn").(*gorm.DB)
+
+		err = model.Delete${1}ByID(db, id)
+		if err != nil {
+			utils.NotFound(c, "Could not find ${1} with id %d, %v", id, err.Error())
+			return
+		}
+
+		utils.Success(c, "${1} id %d deleted", id)
+	}
+
+snippet resp500 "Send http response 500"
+	message := fmt.Sprintf("{1:Error message}: %v", err)
+	utils.InternalServerError(c, message)
+	return
+snippet oapi "OpenAPI doc"
+	// @BasePath /api/
+	// @Summary ${2:Summary}
+	// @Description ${4:Description}
+	// @Tags ${5:Tags}
+	// @Accept json
+	// @Produce json
+	// @Router ${6:Path} [${7:http method}]
+snippet oapiparam "OpenAPI doc Param"
+	// @Param ${1:Name} ${2:Type query/path/header/body/form data} ${3:DataType} ${4:Required bool} ${5:Comment}
+snippet oapisuccess "OpenAPI Success definition"
+	// @Success ${1:Code or default} {${2:Data type object/string/etc}} ${3:DataType} ${4:Comment}
+snippet oapifailure "OpenAPI Failure definition"
+	// @Failure ${1:Code or default} {${2:Data type object/string/etc}} ${3:DataType} ${4:Comment}
+snippet oapitag "OpenAPI Tag definition"
+	// @tag.name ${1:Tag name}
+	// @tag.description ${2:Tag description}
